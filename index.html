@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title> Sorteio Canecas AntenaDev</title>
+     <link rel="stylesheet" href="css/styles.css">
+  
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    
+  </head>
+  <body>
+    <div id="container" class="container">
+      <header>
+      <h1>Sorteio Canecas AntenaDev</h1>
+      <p>Cada círculo representa um participante. <b>82 alunos</b> se inscreveram para o sorteio. Os círculos que chegarem primeiro ao outro lado serão os vencedores. Cada círculo se move uma quantidade de pixels aleatória (entre 1 e 20). A ordem da animação também é aleatória.</p>
+      <button id="start" type="button" class="btn btn-success" onclick="run()">Start!</button>
+      <p> </p>
+      </header>
+      <div id="main" role="main">
+        <div id="vis"></div>
+      </div>
+      <div id="winners">
+        <h3> Vencedores: </h3>
+      </div>
+      
+    </div> <!--! end of #container -->
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script>
+    let max_selected = 5; // Number of participants to be selected
+    let w = 1280, 
+    h = 500;
+    let race_length = h - 25; // Number of pixels in the course
+    let svg = d3.select("#vis").append("svg")
+                .attr("width", w)
+                .attr("height", h);
+    let start_line = svg.append("line").attr("x1", 5)
+                              .attr("x2", w-5)
+                              .attr("y1", 10)
+                              .attr("y2", 10)
+                              .style("stroke", "333333");
+
+    let finish_line = svg.append("line").attr("x1", 5)
+                              .attr("x2", w-5)
+                              .attr("y1", race_length)
+                              .attr("y2", race_length)
+                              .style("stroke", "333333");
+    let current = [];
+    let timer = null;
+    let indexes = null;
+
+    function run() {
+      $('#start').prop('disabled', true);
+      d3.csv("data/participants.csv", function(data){
+      data.forEach(function(d, i){
+        d.id = i;
+        d.radius = 5;
+        d.x = i*(d.radius+8) + 10;
+        d.y = 5;
+      });
+      
+        indexes = d3.range(data.length);
+        start(data);
+        timer = d3.interval(function() {
+        update(data); }, 750); 
+      
+      });
+
+    }
+
+    function start(data) {
+      var t = d3.transition()
+                .duration(750);
+      
+      var circles = svg.selectAll("circle")
+                       .data(data);
+
+      circles.enter().append("svg:circle")
+          .attr("r", function(d) { return d.radius; })
+          .transition(t)
+          .attr("cx", function(d) { return d.x; })
+          .attr("cy", function(d) { return d.y; })
+          .style("fill", "#fdae6b");
+    }
+    
+    function update(data) {
+      var t = d3.transition()
+                .duration(750);
+
+      const deltamax = 20;
+
+      //let's change the order of the elements everytime we go through them
+      d3.shuffle(indexes);
+
+      indexes.forEach(function(i){
+        let d = data[i];
+        if (d.y < race_length) {
+          d.sy = d.y;
+          d.y = d.y + Math.floor((Math.random() * deltamax) + 1);
+        } else {
+          if (current.length < max_selected && current.indexOf(d.id) == -1) {
+            let pos = current.push(d.id);
+            d3.select("#winners").append("p").text(pos+"º: "+ d.nome);
+            //console.log(d.nome);
+          } 
+        }
+      });
+      var circles = svg.selectAll("circle").data(data);
+      
+
+      circles.attr("cx", function(d) { return d.x; })
+             .attr("cy", function(d) { return d.sy; })
+             .transition(t)
+             .attr("cx", function(d) { return d.x; })
+             .attr("cy", function(d) { return d.y;});
+      
+      if (current.length == max_selected){
+        timer.stop();
+        console.log("End.")
+      }
+             
+      
+    }
+    </script>
+  </body>
+</html>
